@@ -1,5 +1,5 @@
 <launch>
-    <arg name="parameter_directory" default="/home/larrkchlaptop/catkin_ws/src/camlidar_module/params/bluefox_vlp16_BS.yaml"/>
+    <arg name="parameter_directory" default="$(find camlidar_sync)/params/bluefox_vlp16_BS.yaml"/>
     <arg name="save_directory" default="/home/larrkchlaptop/camlidar_data/"/>
 
     <arg name="snapshot_saving_onoff" default="true"/>
@@ -30,9 +30,9 @@
 
     <group ns = "lidar0">
       <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
-        <arg name="device_ip" value="192.168.1.101" />
+        <arg name="device_ip" value="192.168.2.101" />
         <arg name="port" value="2367" />
-        <arg name="rpm" value="600" />
+        <arg name="rpm" value="600" /> <!--1200? see the NUC of drone -->
         <arg name="gps_time" value="true" />
       </include>
     </group>	
