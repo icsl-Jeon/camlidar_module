@@ -70,9 +70,12 @@ public:
     bool isReceived = false; // pcl and image all received
 
 private: // ROS related
+    string baselink_frame;
     ros::NodeHandle nh_;
     ros::Publisher pubBBQueriedPCL;
     bool isBBQueried = false;
+    bool isPixelQueried = false;
+
     cv::Rect lastBBQuery;
 
      // subscribers

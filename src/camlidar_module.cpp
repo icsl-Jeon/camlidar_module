@@ -40,6 +40,10 @@ CamLidarSyncAlign::CamLidarSyncAlign(ros::NodeHandle& nh, const string& param_pa
 
     this->pubBBQueriedPCL = nh.advertise<sensor_msgs::PointCloud2>("bb_queried_pnts",1);
 
+
+    ros::param::get("~baselink_id", baselink_frame);
+
+//    this->baselink_frame = nh.param<string>("baselink_id",baselink_frame,"base_link");
     this->img_sub = new message_filters::Subscriber<sensor_msgs::Image>(nh_, topicname_img_, 1);
     this->lidar_sub = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh_, topicname_lidar_, 1);
 
@@ -134,7 +138,7 @@ void CamLidarSyncAlign::publish() {
         sensor_msgs::PointCloud2 pclROS;
         pcl::toROSMsg(*lastQueriedPoints,pclROS);
         pclROS.header.stamp = ros::Time::now();
-        pclROS.header.frame_id = "base_link";
+        pclROS.header.frame_id = baselink_frame;
         pubBBQueriedPCL.publish(pclROS);
     }
 

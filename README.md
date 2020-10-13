@@ -5,9 +5,9 @@
 
 ### Dependency 
 
-1. Open
 
-### Bluefox 
+
+#### Bluefox 
 
 1. install bluefox driver
 
@@ -32,10 +32,20 @@ cd ~/catkin_ws
 catkin build bluefox_ros
 ```
 
-### Velodyne 
+#### Velodyne (option)
 
 ```bash
 https://github.com/ChanghyeonKim93/velodyne.git
+```
+
+#### px4_code (option)
+```bash
+https://github.com/icsl-Jeon/px4_code.git
+```
+
+#### vijeon (option)
+```base
+https://github.com/icsl-Jeon/vijeon.git
 ```
 
 ## HSV target localization 

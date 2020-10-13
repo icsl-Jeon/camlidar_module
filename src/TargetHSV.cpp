@@ -36,7 +36,7 @@ sensor_msgs::ImagePtr imageToROSmsg(cv::Mat img, const std::string encodingType,
 TargetHSV::TargetHSV():nh("~"),it(nh){
     string param_directory;
     nh.param<string>("parameter_directory", param_directory,
-            "/home/jbs/catkin_ws/src/camlidar_module/params/bluefox_vlp16_BS.yaml");
+            "/home/jbs/test_ws/src/camlidar_module/params/bluefox_vlp16_BS.yaml");
 
     // Camlidar Sync
     cl = new CamLidarSyncAlign(nh,param_directory,"");
@@ -117,7 +117,7 @@ bool TargetHSV::update() {
             ROS_WARN("lost target.");
             return false;
         }
-        cl->pntPixelQuery(curTargetPixels); // upload
+        cl->pntPixelQuery(curTargetPixels); // upload the pixel to cl
         imshow(window_name, thresImage); //show the thresholded image
         cv::waitKey(1);
         return true;
@@ -140,6 +140,10 @@ bool TargetHSV::uploadTargetPixel() {
                     curTargetPixels.push_back(cv::Point(c,r));
             }
         }
+
+//        cout << "[HSV detector] current number of target pixels  "<< curTargetPixels.size() << endl;
+
+
         return true;
     }
 
@@ -155,6 +159,7 @@ void TargetHSV::run(){
             ROS_WARN_THROTTLE(2,"[TargetHSV] update failed.");
         }
         publish();
+        cl->publish();
         ros::spinOnce();
         rl.sleep();
     }
