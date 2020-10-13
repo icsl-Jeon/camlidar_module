@@ -32,6 +32,7 @@ private:
     image_transport::ImageTransport it;
     image_transport::Publisher pubThresMask;
 
+    vector<cv::Point> curTargetPixels;
 
     cv::Mat thresImage;
     cv::Mat undistortImage;
@@ -40,6 +41,7 @@ private:
     string window_name = "hsv thresholded" ;
     void initTreshWindow();
     void publish();
+    bool uploadTargetPixel();
 
 public:
     explicit TargetHSV();

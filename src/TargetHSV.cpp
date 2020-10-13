@@ -36,18 +36,18 @@ sensor_msgs::ImagePtr imageToROSmsg(cv::Mat img, const std::string encodingType,
 TargetHSV::TargetHSV():nh("~"),it(nh){
     string param_directory;
     nh.param<string>("parameter_directory", param_directory,
-            "/home/jbs/test_ws/src/camlidar_module/params/bluefox_vlp16_BS.yaml");
+            "/home/jbs/catkin_ws/src/camlidar_module/params/bluefox_vlp16_BS.yaml");
 
     // Camlidar Sync
     cl = new CamLidarSyncAlign(nh,param_directory,"");
 
 
-    nh.param("H_max",target_hsv_thres.iHighH,114);
+    nh.param("H_max",target_hsv_thres.iHighH,37);
     nh.param("H_min",target_hsv_thres.iLowH,0);
     nh.param("S_max",target_hsv_thres.iHighS,255);
-    nh.param("S_min",target_hsv_thres.iLowS,153);
-    nh.param("V_max",target_hsv_thres.iHighV,48);
-    nh.param("V_min",target_hsv_thres.iLowV,187);
+    nh.param("S_min",target_hsv_thres.iLowS,88);
+    nh.param("V_max",target_hsv_thres.iHighV,235);
+    nh.param("V_min",target_hsv_thres.iLowV,53);
     nh.param("circle_param1",target_hsv_thres.circle_detect_param1,5);
     nh.param("circle_param2",target_hsv_thres.circle_detect_param2,5);
 
@@ -75,7 +75,7 @@ void TargetHSV::thresholding(){
     //morphological closing (fill small holes in the foreground)
     cv::dilate(thresImage, thresImage, getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(target_hsv_thres.circle_detect_param2, target_hsv_thres.circle_detect_param2)));
     cv::erode(thresImage, thresImage, getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(target_hsv_thres.circle_detect_param2, target_hsv_thres.circle_detect_param2)));
-
+//    cout << thresImage << endl;
 }
 
 void TargetHSV::initTreshWindow() {
@@ -112,12 +112,37 @@ bool TargetHSV::update() {
 
         // update thresImage
         thresholding();
-        // TOOD add sanity condition
-
+        // update target pixels
+        if (not uploadTargetPixel() ){
+            ROS_WARN("lost target.");
+            return false;
+        }
+        cl->pntPixelQuery(curTargetPixels); // upload
         imshow(window_name, thresImage); //show the thresholded image
         cv::waitKey(1);
         return true;
     }
+
+}
+/**
+ * Update the target pixels by binary thres holding
+ */
+bool TargetHSV::uploadTargetPixel() {
+    if (cv::countNonZero(thresImage) == 0 ){
+        ROS_WARN("Target is not detected! ");
+        return false;
+    }else{
+        curTargetPixels.clear();
+        for (int r = 0 ; r < thresImage.rows ; r++ ){
+            auto rowPtr = thresImage.ptr<uchar>(r);
+            for (int c = 0 ; c < thresImage.cols ; c++ ){
+                if (rowPtr[c] == 255)
+                    curTargetPixels.push_back(cv::Point(c,r));
+            }
+        }
+        return true;
+    }
+
 
 }
 

@@ -11,12 +11,12 @@
 
 1. install bluefox driver
 
-```asm
+```bash
 cd camlidar_module/camera_drivers/
 
-unzip mvBlueCOUGAR_driver.zip -d mvBlueCOUGAR_driver;
+unzip mvBlueCOUGAR_driver.zip -d mvBlueCOUGAR_driver
 
-cd camlidar_module/camera_drivers/mvBlueCOUGAR_driver/matrixvision
+cd mvBlueCOUGAR_driver/matrixvision
 
 sudo chmod +x install_mvGenTL_Acquire.sh
 
@@ -24,7 +24,7 @@ sudo chmod +x install_mvGenTL_Acquire.sh
 
 2. bluefox_ros
 
-```asm
+```bash
 git clone https://github.com/icsl-Jeon/bluefox_ros.git
 
 cd ~/catkin_ws
@@ -34,7 +34,7 @@ catkin build bluefox_ros
 
 ### Velodyne 
 
-```asm
+```bash
 https://github.com/ChanghyeonKim93/velodyne.git
 ```
 
