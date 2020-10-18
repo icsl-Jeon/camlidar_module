@@ -1,5 +1,5 @@
 <launch>
-    <arg name="parameter_directory" default="$(find camlidar_sync)/params/bluefox_vlp16_BS.yaml"/>
+    <arg name="parameter_directory" default="$(find camlidar_module)/params/bluefox_vlp16_BS.yaml"/>
     <arg name="save_directory" default="/home/larrkchlaptop/camlidar_data/"/>
 
     <arg name="snapshot_saving_onoff" default="true"/>

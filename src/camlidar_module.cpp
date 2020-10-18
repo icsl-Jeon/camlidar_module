@@ -39,6 +39,7 @@ CamLidarSyncAlign::CamLidarSyncAlign(ros::NodeHandle& nh, const string& param_pa
     topicname_lidar_ = "/lidar0/velodyne_points";
 
     this->pubBBQueriedPCL = nh.advertise<sensor_msgs::PointCloud2>("bb_queried_pnts",1);
+    this->pubVelodyneOriginalTime = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points_original",1);
 
 
     ros::param::get("~baselink_id", baselink_frame);
@@ -92,11 +93,11 @@ CamLidarSyncAlign::CamLidarSyncAlign(ros::NodeHandle& nh, const string& param_pa
 
     // debug image on/off
     flag_debugimage_ = true;
-    //ros::param::get("~flag_debugimage", flag_debugimage_);
+    ros::param::get("~flag_debugimage", flag_debugimage_);
 
     if(flag_debugimage_){
         winname_ = "undistorted image";
-        cv::namedWindow(winname_,cv::WINDOW_AUTOSIZE);
+         cv::namedWindow(winname_,cv::WINDOW_AUTOSIZE);
     }
 
     // index image
@@ -132,6 +133,8 @@ CamLidarSyncAlign::~CamLidarSyncAlign(){
 
 
 void CamLidarSyncAlign::publish() {
+    if(isReceived and pubVelodyneOriginalTime.getNumSubscribers() > 0)
+        pubVelodyneOriginalTime.publish(receivedVelodyne);
     if (isBBQueried){
 
         ROS_INFO_ONCE("queried points publishing starts.");
@@ -141,6 +144,9 @@ void CamLidarSyncAlign::publish() {
         pclROS.header.frame_id = baselink_frame;
         pubBBQueriedPCL.publish(pclROS);
     }
+
+
+
 
 }
 
@@ -159,6 +165,8 @@ void CamLidarSyncAlign::callbackImageLidarSync(const sensor_msgs::ImageConstPtr&
     double time_img = (double)(msg_image->header.stamp.sec * 1e6 + msg_image->header.stamp.nsec / 1000) / 1000000.0;
     double time_lidar = (double)(msg_lidar->header.stamp.sec * 1e6 + msg_lidar->header.stamp.nsec / 1000) / 1000000.0;
 
+    receivedVelodyne = *msg_lidar;
+    receivedVelodyne.header.stamp = ros::Time::now(); // time reconfigure to orignal ros time
 
     buf_time_ = time_img;
 

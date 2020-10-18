@@ -73,9 +73,11 @@ private: // ROS related
     string baselink_frame;
     ros::NodeHandle nh_;
     ros::Publisher pubBBQueriedPCL;
+    ros::Publisher pubVelodyneOriginalTime;
+
     bool isBBQueried = false;
     bool isPixelQueried = false;
-
+    sensor_msgs::PointCloud2 receivedVelodyne;
     cv::Rect lastBBQuery;
 
      // subscribers

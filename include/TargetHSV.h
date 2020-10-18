@@ -31,7 +31,7 @@ private:
     ros::NodeHandle nh;
     image_transport::ImageTransport it;
     image_transport::Publisher pubThresMask;
-
+    bool setImshow = true;
     vector<cv::Point> curTargetPixels;
 
     cv::Mat thresImage;

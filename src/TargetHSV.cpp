@@ -50,10 +50,11 @@ TargetHSV::TargetHSV():nh("~"),it(nh){
     nh.param("V_min",target_hsv_thres.iLowV,53);
     nh.param("circle_param1",target_hsv_thres.circle_detect_param1,5);
     nh.param("circle_param2",target_hsv_thres.circle_detect_param2,5);
+    nh.param("imshow",setImshow,true);
 
     pubThresMask= it.advertise("undistorted_thres_mask",1);
-    initTreshWindow();
-
+    if (setImshow)
+         initTreshWindow();
 }
 
 /**
@@ -95,7 +96,7 @@ void TargetHSV::initTreshWindow() {
 
 
 void TargetHSV::publish() {
-    pubThresMask.publish(imageToROSmsg(thresImage,sensor_msgs::image_encodings::BGR8,"bluefox",ros::Time::now()));
+    pubThresMask.publish(imageToROSmsg(thresImage,sensor_msgs::image_encodings::MONO8,"bluefox",ros::Time::now()));
 
 }
 /**
@@ -118,8 +119,11 @@ bool TargetHSV::update() {
             return false;
         }
         cl->pntPixelQuery(curTargetPixels); // upload the pixel to cl
-        imshow(window_name, thresImage); //show the thresholded image
-        cv::waitKey(1);
+        if (setImshow){
+            imshow(window_name, thresImage); //show the thresholded image
+            cv::waitKey(1);
+        }
+
         return true;
     }
 
