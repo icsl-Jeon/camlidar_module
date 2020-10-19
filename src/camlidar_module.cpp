@@ -420,16 +420,21 @@ void CamLidarSyncAlign::pntPixelQuery(const vector<cv::Point>& queryPntSet) {
         ROS_INFO_ONCE("Initialized the center of target cloud as [%f,%f] from %d clusters.\n ",prevTargetClusterCenter(0),prevTargetClusterCenter(1),totalClusterId);
 
         // save it to processed target pcl
-        lastQueriedPointsProcess->points.clear();
 
-        for (auto pnt : pointSet[targetClusterId].points){
-            pcl::PointXYZ pntPCL;
-            pntPCL.x = pnt.x;
-            pntPCL.y = pnt.y;
-            pntPCL.z = pnt.z;
-            lastQueriedPointsProcess->points.push_back(pntPCL);
+        if (targetClusterId >= 0) {
+
+            lastQueriedPointsProcess->points.clear();
+
+            for (auto pnt : pointSet[targetClusterId].points) {
+                pcl::PointXYZ pntPCL;
+                pntPCL.x = pnt.x;
+                pntPCL.y = pnt.y;
+                pntPCL.z = pnt.z;
+                lastQueriedPointsProcess->points.push_back(pntPCL);
+            }
+        }else{
+            ROS_WARN("seems no clusters existing..");
         }
-
         isBBQueried = true;
     }
 }

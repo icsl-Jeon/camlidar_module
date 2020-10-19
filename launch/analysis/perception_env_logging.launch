@@ -1,61 +1,71 @@
 <launch>
 <!-- first, roslaunch px4_code  lego_loam_px4.launch -->
-    <arg name="parameter_directory" default="$(find camlidar_module)/params/bluefox_vlp16_BS.yaml"/>
-    <arg name="save_directory" default="/home/"/>
-    <arg name="snapshot_saving_onoff" default="false"/>
-    <arg name="flag_debugimage" default="true"/>
-    <arg name = "base_link_fusion" default="base_link_fusion"/>
-    <arg name = "rviz" default="true"/>
-
-    <arg name="binning_on" default="false"/>
-    <arg name="software_binning_on" default="true"/>
-    <arg name="software_binning_level" default="1"/>
-    <arg name="triggered_on" default="true"/>
-    <arg name="auto_exposure_control" default="false"/>
-    <arg name="auto_gain_control" default="false"/>
-    <arg name="high_dynamic_range_on" default="true"/>
-    <arg name="expose_us" default="15000"/>
-    <arg name="frame_rate" default="10.0"/>
-    <arg name = "map_align_angle" default = "0.0"/>
-    <arg name = "imshow" default = "true"/>
-    <arg name = "to_center_ratio" default = "0.6"/>
-
-    <!-- naked turtlebot  -->
-    <arg name = "H_max" value = "45" />
-    <arg name = "H_min" value = "0" />
-    <arg name = "S_max" value = "118" />
-    <arg name = "S_min" value = "39" />
-    <arg name = "V_max" value = "196" />
-    <arg name = "V_min" value = "53" />
+    <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/test1.bag"/>
+    <arg name = "obstMinX" value = "0"/>
+    <arg name = "obstMaxX" value = "13"/>
+    <arg name = "obstMinY" value = "-4"/>
+    <arg name = "obstMaxY" value = "4"/>
 
 
 
-
-   <node pkg="rosserial_python" type="serial_node.py" name="arduino_UART" args="_port:=/dev/ttyACM0 _baud:=460800" output="screen">
+    <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir)">
+        <remap from = "/velodyne_points_original" to = "/pcl"/>
     </node>
 
 
-    <!-- camlidar with hsv -->
-    <node pkg = "camlidar_module" type = "hsv_target_pcl_extractor" name="target_hsv_extractor" output="screen">
-        <param name= "map_frame" value = "/map"/>
-        <param name= "baselink_id" value = "$(arg base_link_fusion)"/>
-        <param name="parameter_directory" type="string" value="$(arg parameter_directory)"/>
-        <param name = "imshow" value = "$(arg imshow)" />
-        <param name = "flag_debugimage" value = "$(arg imshow)" />
+    <!-- obstacle extractor -->
+    <node name="nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="log">
+        <param name="num_worker_threads" value="20"/>
+    </node>
+
+    <node name="obstacle_extractor" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleExtractor nodelet_manager">
+        <param name="active"               value="true"/>
+        <param name="use_scan"             value="false"/>
+        <param name="use_pcl"              value="true"/>
+
+        <param name="use_split_and_merge"    value="false"/>
+        <param name="circles_from_visibles"  value="false"/>
+        <param name="discard_converted_segments" value="false"/>
+        <param name="transform_coordinates"  value="true"/>
+
+        <param name="min_group_points"     value="10"/>
+
+        <param name="max_group_distance"   value="0.3"/>
+        <param name="distance_proportion"  value="0.00628"/>
+        <param name="max_split_distance"   value="3"/>
+        <param name="max_merge_separation" value="0.3"/>
+        <param name="max_merge_spread"     value="2.0"/>
+        <param name="max_circle_radius"    value="1.5"/>
+        <param name="radius_enlargement"   value="0.3"/>
+
+        <param name="min_x_limit"   value="$(arg obstMinX)"/>
+        <param name="max_x_limit"   value="$(arg obstMaxX)"/>
+        <param name="min_y_limit"   value="$(arg obstMinY)"/>
+        <param name="max_y_limit"   value="$(arg obstMaxY)"/>
 
 
-<!--         <param name = "H_max" value = "$(arg H_max)" /> -->
-<!--         <param name = "H_min" value = "$(arg H_min)"/> -->
-<!--         <param name = "S_max" value = "$(arg S_max)" /> -->
-<!--         <param name = "S_min" value = "$(arg S_min)" /> -->
-<!--         <param name = "V_max" value = "$(arg V_max)" /> -->
-<!--         <param name = "V_min" value = "$(arg V_min)" /> -->
+        <param name="frame_id"             value="map"/>
+    </node>
 
+    <node name="obstacle_tracker" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleTracker nodelet_manager">
+        <param name="active"                  value="true"/>
+
+        <param name="loop_rate"               value="50.0"/>
+        <param name="tracking_duration"       value="200000.0"/>
+        <param name="min_correspondence_cost" value="1.0"/>
+        <param name="std_correspondence_dev"  value="0.15"/>
+        <param name="process_variance"        value="0.001"/>
+        <param name="process_rate_variance"   value="0.002"/>
+        <param name="measurement_variance"    value="0.4"/>
+
+        <param name="frame_id"                value="map"/>
+
+        <remap from="tracked_obstacles" to="obstacles"/>
     </node>
 
 
 
-    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find auto_chaser2)/rviz/realworldInput.rviz" if = "$(arg rviz)"/>
+    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find auto_chaser2)/rviz/realworldInput.rviz"/>
 
 
 
