@@ -1,40 +1,47 @@
 <launch>
 <!-- first, roslaunch px4_code  lego_loam_px4.launch -->
-    <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/test1.bag"/>
+<!--     <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/test1.bag"/> -->
+    <arg name="bag_dir" default="/media/jbs/Samsung_T3/2020BAG/vijeon/auto_chaser2/layerA/test1.bag"/>
+    <!-- w.r.t world frame  -->
     <arg name = "obstMinX" value = "0"/>
     <arg name = "obstMaxX" value = "13"/>
+
+
     <arg name = "obstMinY" value = "-4"/>
     <arg name = "obstMaxY" value = "4"/>
 
+    <arg name = "obstMinZ" value = "-0.3"/>
+    <arg name = "obstMaxZ" value = "0.5"/>
 
+    <param name = "use_sim_time" value = "true"/>
 
-    <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir)">
+    <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir) --clock --loop">
         <remap from = "/velodyne_points_original" to = "/pcl"/>
     </node>
 
 
     <!-- obstacle extractor -->
-    <node name="nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="log">
+    <node name="nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="screen">
         <param name="num_worker_threads" value="20"/>
     </node>
 
-    <node name="obstacle_extractor" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleExtractor nodelet_manager">
+    <node name="obstacle_extractor" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleExtractor nodelet_manager" output = "log">
         <param name="active"               value="true"/>
         <param name="use_scan"             value="false"/>
         <param name="use_pcl"              value="true"/>
 
-        <param name="use_split_and_merge"    value="false"/>
+        <param name="use_split_and_merge"    value="true"/>
         <param name="circles_from_visibles"  value="false"/>
         <param name="discard_converted_segments" value="false"/>
         <param name="transform_coordinates"  value="true"/>
 
-        <param name="min_group_points"     value="10"/>
+        <param name="min_group_points"     value="5"/>
 
-        <param name="max_group_distance"   value="0.3"/>
-        <param name="distance_proportion"  value="0.00628"/>
+        <param name="max_group_distance"   value="0.5"/>
+        <param name="distance_proportion"  value="0.01"/>
         <param name="max_split_distance"   value="3"/>
-        <param name="max_merge_separation" value="0.3"/>
-        <param name="max_merge_spread"     value="2.0"/>
+        <param name="max_merge_separation" value="0.1"/>
+        <param name="max_merge_spread"     value="1.0"/>
         <param name="max_circle_radius"    value="1.5"/>
         <param name="radius_enlargement"   value="0.3"/>
 
@@ -42,12 +49,13 @@
         <param name="max_x_limit"   value="$(arg obstMaxX)"/>
         <param name="min_y_limit"   value="$(arg obstMinY)"/>
         <param name="max_y_limit"   value="$(arg obstMaxY)"/>
-
+        <param name="min_z_limit"   value="$(arg obstMinZ)"/>
+        <param name="max_z_limit"   value="$(arg obstMaxZ)"/>
 
         <param name="frame_id"             value="map"/>
     </node>
 
-    <node name="obstacle_tracker" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleTracker nodelet_manager">
+    <node name="obstacle_tracker" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleTracker nodelet_manager" >
         <param name="active"                  value="true"/>
 
         <param name="loop_rate"               value="50.0"/>
