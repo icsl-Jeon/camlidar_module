@@ -55,3 +55,6 @@ https://github.com/icsl-Jeon/vijeon.git
 We threshold the undistored image (member var of `CamLidarSyncAlign` class) not an original image obtained from bluefox camera. 
 
 ### Possible issues 
+
+Ths number of clustered target pcls can change frequently 
+if the noisy target pcl is not clustered into a valid group.

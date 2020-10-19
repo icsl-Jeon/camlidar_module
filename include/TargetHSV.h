@@ -30,11 +30,17 @@ private:
     CamLidarSyncAlign* cl;
     ros::NodeHandle nh;
     image_transport::ImageTransport it;
+
     image_transport::Publisher pubThresMask;
+    image_transport::Publisher pubThresMaskProcess;
+    float toCenterRatio = 0 ; // 0< <1 : 0=original / 1=center
     bool setImshow = true;
     vector<cv::Point> curTargetPixels;
+    cv::Point curTargetPixelCenter;
 
     cv::Mat thresImage;
+    cv::Mat thresImageProcess;
+
     cv::Mat undistortImage;
     bool update();
     void thresholding();

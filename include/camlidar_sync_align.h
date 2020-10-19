@@ -38,7 +38,13 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+// dbscan
+#include "dbscan.h"
+#include <tf/transform_listener.h>
+
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::PointCloud2> MySyncPolicy;
+sensor_msgs::ImagePtr imageToROSmsg(cv::Mat img, const std::string encodingType,
+                                    std::string frameId, ros::Time t);
 
 using namespace std;
 inline string dtos(double x) {
@@ -71,11 +77,18 @@ public:
 
 private: // ROS related
     string baselink_frame;
+    string map_frame;
     ros::NodeHandle nh_;
     ros::Publisher pubBBQueriedPCL;
+
+    ros::Publisher pubBBQueriedPCLProcess;
     ros::Publisher pubVelodyneOriginalTime;
+    ros::Publisher pubCaliImage;
+
+    tf::TransformListener tf_l;
 
     bool isBBQueried = false;
+    bool isQueryValid = false; // false if the number of queried points are zero
     bool isPixelQueried = false;
     sensor_msgs::PointCloud2 receivedVelodyne;
     cv::Rect lastBBQuery;
@@ -93,13 +106,14 @@ private: // ROS related
     cv::Mat buf_img_; // Images from mvBlueCOUGAR-X cameras.
     cv::Mat img_undistort_; // image (undistorted, CV_32F (float))
     cv::Mat img_index_; // (CV_16S, -32768~32767) index image (having same size with img_undistort_) storing indexes of warped LiDAR points.
-
-
+    cv::Mat img_cali_; // calibration turning image
 
     double buf_time_; // triggered time stamp from Arduino. (seconds)
     pcl::PointCloud<pcl::PointXYZI>::Ptr buf_lidar_; // point clouds (w/ intensity) from Velodyne VLP16 
     pcl::PointCloud<pcl::PointXYZI>::Ptr lidar_pcl_warped_; // Pointclouds (warped onto the image frame from the LiDAR frame)
     pcl::PointCloud<pcl::PointXYZ>::Ptr lastQueriedPoints; // JBS
+    pcl::PointCloud<pcl::PointXYZ>::Ptr lastQueriedPointsProcess; // JBS
+
 
     // points w.r.t velodyne
     float* buf_lidar_x;
@@ -133,6 +147,8 @@ private: // image undistorter & lidar warping.
     Eigen::Matrix3d K;
     Eigen::Matrix4d T_cl; // SE(3) transform from a camera frame to a LiDAR frame.
     Eigen::Matrix4d T_bl; // SE(3) transform from a baselink frame to a LiDAR frame (for my drone setting).
+    Eigen::Matrix4d T_wb; // SE(3) transform from a world frame to a baselink (for my drone setting).
+    Eigen::Vector3f prevTargetClusterCenter;
 
     int n_cols; // image width
     int n_rows; // image height
@@ -140,6 +156,8 @@ private: // image undistorter & lidar warping.
     cv::Mat undist_map_x; // undistortion map x (pre-calculated in 'preCalculateUndistortMaps' for speed)
     cv::Mat undist_map_y; // undistortion map y (pre-calculated in 'preCalculateUndistortMaps' for speed)
 
+    float dbscan_eps;
+    int dbscan_min_pnts;
 
     // for debug image
     bool flag_debugimage_;

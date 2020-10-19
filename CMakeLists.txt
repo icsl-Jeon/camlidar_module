@@ -52,12 +52,12 @@ set(DCMAKE_build_type release)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pg -O2 -m64 -Ofast -flto -msse3 -march=native -mfpmath=sse")
 
-add_executable (camlidar_module ${SRC})
+add_executable (camlidar_module ${SRC} src/dbscan.cpp)
 target_link_libraries (camlidar_module ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
 
-add_executable (camlidar_BB_tester test/BB_tester.cpp src/camlidar_module.cpp src/keyinput.cpp)
+add_executable (camlidar_BB_tester test/BB_tester.cpp src/camlidar_module.cpp src/keyinput.cpp src/dbscan.cpp)
 target_link_libraries (camlidar_BB_tester ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
 
-add_executable (hsv_target_pcl_extractor src/main_hsv.cpp src/TargetHSV.cpp src/camlidar_module.cpp src/keyinput.cpp)
+add_executable (hsv_target_pcl_extractor src/main_hsv.cpp src/TargetHSV.cpp src/camlidar_module.cpp src/keyinput.cpp src/dbscan.cpp)
 target_link_libraries (hsv_target_pcl_extractor ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
 

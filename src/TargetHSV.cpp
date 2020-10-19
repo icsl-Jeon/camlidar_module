@@ -4,33 +4,6 @@
 
 #include "TargetHSV.h"
 
-sensor_msgs::ImagePtr imageToROSmsg(cv::Mat img, const std::string encodingType, std::string frameId, ros::Time t) {
-    sensor_msgs::ImagePtr ptr = boost::make_shared<sensor_msgs::Image>();
-    sensor_msgs::Image& imgMessage = *ptr;
-    imgMessage.header.stamp = t;
-    imgMessage.header.frame_id = frameId;
-    imgMessage.height = img.rows;
-    imgMessage.width = img.cols;
-    imgMessage.encoding = encodingType;
-    int num = 1; //for endianness detection
-    imgMessage.is_bigendian = !(*(char *) &num == 1);
-    imgMessage.step = img.cols * img.elemSize();
-    size_t size = imgMessage.step * img.rows;
-    imgMessage.data.resize(size);
-
-    if (img.isContinuous())
-        memcpy((char*) (&imgMessage.data[0]), img.data, size);
-    else {
-        uchar* opencvData = img.data;
-        uchar* rosData = (uchar*) (&imgMessage.data[0]);
-        for (unsigned int i = 0; i < img.rows; i++) {
-            memcpy(rosData, opencvData, imgMessage.step);
-            rosData += imgMessage.step;
-            opencvData += img.step;
-        }
-    }
-    return ptr;
-}
 
 
 TargetHSV::TargetHSV():nh("~"),it(nh){
@@ -51,8 +24,12 @@ TargetHSV::TargetHSV():nh("~"),it(nh){
     nh.param("circle_param1",target_hsv_thres.circle_detect_param1,5);
     nh.param("circle_param2",target_hsv_thres.circle_detect_param2,5);
     nh.param("imshow",setImshow,true);
+    nh.param("toCenterRatio",toCenterRatio,0.5f);
+
 
     pubThresMask= it.advertise("undistorted_thres_mask",1);
+    pubThresMaskProcess = it.advertise("undistorted_thres_mask_process",1);
+
     if (setImshow)
          initTreshWindow();
 }
@@ -76,7 +53,9 @@ void TargetHSV::thresholding(){
     //morphological closing (fill small holes in the foreground)
     cv::dilate(thresImage, thresImage, getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(target_hsv_thres.circle_detect_param2, target_hsv_thres.circle_detect_param2)));
     cv::erode(thresImage, thresImage, getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(target_hsv_thres.circle_detect_param2, target_hsv_thres.circle_detect_param2)));
-//    cout << thresImage << endl;
+
+    cvtColor(thresImage,thresImageProcess,cv::COLOR_GRAY2BGR);
+    //    cout << thresImage << endl;
 }
 
 void TargetHSV::initTreshWindow() {
@@ -97,7 +76,7 @@ void TargetHSV::initTreshWindow() {
 
 void TargetHSV::publish() {
     pubThresMask.publish(imageToROSmsg(thresImage,sensor_msgs::image_encodings::MONO8,"bluefox",ros::Time::now()));
-
+    pubThresMaskProcess.publish(imageToROSmsg(thresImageProcess,sensor_msgs::image_encodings::BGR8,"bluefox",ros::Time::now()));
 }
 /**
  * Update the thres hold image
@@ -115,6 +94,8 @@ bool TargetHSV::update() {
         thresholding();
         // update target pixels
         if (not uploadTargetPixel() ){
+            vector<cv::Point> emptySet;
+            cl->pntPixelQuery(emptySet);
             ROS_WARN("lost target.");
             return false;
         }
@@ -137,16 +118,40 @@ bool TargetHSV::uploadTargetPixel() {
         return false;
     }else{
         curTargetPixels.clear();
+
+        vector<float> rs;
+        vector<float> cs;
+
         for (int r = 0 ; r < thresImage.rows ; r++ ){
             auto rowPtr = thresImage.ptr<uchar>(r);
             for (int c = 0 ; c < thresImage.cols ; c++ ){
-                if (rowPtr[c] == 255)
-                    curTargetPixels.push_back(cv::Point(c,r));
+                if (rowPtr[c] == 255) {
+                    curTargetPixels.push_back(cv::Point(c, r));
+                    rs.push_back(r);
+                    cs.push_back(c);
+                }
             }
         }
 
-//        cout << "[HSV detector] current number of target pixels  "<< curTargetPixels.size() << endl;
+        // get the center
+        float rCenter = accumulate(rs.begin(),rs.end(),0.0)/rs.size();
+        float cCenter = accumulate(cs.begin(),cs.end(),0.0)/cs.size();
 
+        curTargetPixelCenter = cv::Point(int(cCenter),int(rCenter));
+        cv::Rect2i centerBox(curTargetPixelCenter,cv::Size(2,2));
+
+        //        cout << "[HSV detector] current number of target pixels  "<< curTargetPixels.size() << endl;
+
+        // shrink toward the center
+        for (auto &pnt : curTargetPixels){
+
+            pnt.x = int((1-toCenterRatio)*pnt.x + toCenterRatio*curTargetPixelCenter.x);
+            pnt.y = int((1-toCenterRatio)*pnt.y + toCenterRatio*curTargetPixelCenter.y);
+            cv::rectangle(thresImageProcess,cv::Rect(pnt.x,pnt.y,1,1),
+                          cv::Scalar(0,255,0),2);
+
+        }
+        cv::rectangle(thresImageProcess,centerBox,cv::Scalar(0,0,255),2);
 
         return true;
     }

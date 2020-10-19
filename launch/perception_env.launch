@@ -60,6 +60,13 @@
         <param name = "flag_debugimage" value = "$(arg imshow)" />
 
 
+        <!-- pose processing to handle calibration error  -->
+
+        <param name = "toCenterRatio" value = "0.5" />
+        <param name = "dbscan_eps" value = "0.1" />
+        <param name = "dbscan_min_pnts" value = "5" />
+
+
 <!--         <param name = "H_max" value = "$(arg H_max)" /> -->
 <!--         <param name = "H_min" value = "$(arg H_min)"/> -->
 <!--         <param name = "S_max" value = "$(arg S_max)" /> -->
@@ -92,7 +99,7 @@
 
 
 
-<!--     <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find vijeon)/rviz/lego_obstacle_tracking.rviz" if = "$(arg rviz)"/> -->
+    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find auto_chaser2)/rviz/realworldInput.rviz" if = "$(arg rviz)"/>
 
 
 

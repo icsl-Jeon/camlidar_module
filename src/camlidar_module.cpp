@@ -3,6 +3,37 @@
 //
 
 # include <camlidar_sync_align.h>
+#include <tf/transform_listener.h>
+
+
+sensor_msgs::ImagePtr imageToROSmsg(cv::Mat img, const std::string encodingType, std::string frameId, ros::Time t) {
+    sensor_msgs::ImagePtr ptr = boost::make_shared<sensor_msgs::Image>();
+    sensor_msgs::Image& imgMessage = *ptr;
+    imgMessage.header.stamp = t;
+    imgMessage.header.frame_id = frameId;
+    imgMessage.height = img.rows;
+    imgMessage.width = img.cols;
+    imgMessage.encoding = encodingType;
+    int num = 1; //for endianness detection
+    imgMessage.is_bigendian = !(*(char *) &num == 1);
+    imgMessage.step = img.cols * img.elemSize();
+    size_t size = imgMessage.step * img.rows;
+    imgMessage.data.resize(size);
+
+    if (img.isContinuous())
+        memcpy((char*) (&imgMessage.data[0]), img.data, size);
+    else {
+        uchar* opencvData = img.data;
+        uchar* rosData = (uchar*) (&imgMessage.data[0]);
+        for (unsigned int i = 0; i < img.rows; i++) {
+            memcpy(rosData, opencvData, imgMessage.step);
+            rosData += imgMessage.step;
+            opencvData += img.step;
+        }
+    }
+    return ptr;
+}
+
 /*
 *
 *
@@ -39,7 +70,14 @@ CamLidarSyncAlign::CamLidarSyncAlign(ros::NodeHandle& nh, const string& param_pa
     topicname_lidar_ = "/lidar0/velodyne_points";
 
     this->pubBBQueriedPCL = nh.advertise<sensor_msgs::PointCloud2>("bb_queried_pnts",1);
+    this->pubBBQueriedPCLProcess = nh.advertise<sensor_msgs::PointCloud2>("bb_queried_pnts_processed",1);
+
     this->pubVelodyneOriginalTime = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points_original",1);
+    this->pubCaliImage = nh.advertise<sensor_msgs::Image>("cali_image",1);
+
+    nh.param<string>("map_frame",map_frame,"map");
+    nh.param("dbscan_eps",dbscan_eps,0.1f);
+    nh.param("dbscan_min_pnts",dbscan_min_pnts,3);
 
 
     ros::param::get("~baselink_id", baselink_frame);
@@ -105,6 +143,10 @@ CamLidarSyncAlign::CamLidarSyncAlign(ros::NodeHandle& nh, const string& param_pa
 
     // BB queried points
     lastQueriedPoints = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    lastQueriedPointsProcess = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+
+
+
     T_bl.setZero();
     T_bl(3,3) = 1.0;
     T_bl(1,0) =  1.0;
@@ -135,14 +177,26 @@ CamLidarSyncAlign::~CamLidarSyncAlign(){
 void CamLidarSyncAlign::publish() {
     if(isReceived and pubVelodyneOriginalTime.getNumSubscribers() > 0)
         pubVelodyneOriginalTime.publish(receivedVelodyne);
-    if (isBBQueried){
+
+    if(isReceived and pubCaliImage.getNumSubscribers() > 0)
+        pubCaliImage.publish(imageToROSmsg(img_cali_,sensor_msgs::image_encodings::BGR8,"bluefox",ros::Time::now()));
+
+    if (isBBQueried and isQueryValid){
 
         ROS_INFO_ONCE("queried points publishing starts.");
         sensor_msgs::PointCloud2 pclROS;
+        sensor_msgs::PointCloud2 pclROSProcess;
+
         pcl::toROSMsg(*lastQueriedPoints,pclROS);
+        pcl::toROSMsg(*lastQueriedPointsProcess,pclROSProcess);
+
         pclROS.header.stamp = ros::Time::now();
         pclROS.header.frame_id = baselink_frame;
+        pclROSProcess.header.stamp = ros::Time::now();
+        pclROSProcess.header.frame_id = baselink_frame;
+
         pubBBQueriedPCL.publish(pclROS);
+        pubBBQueriedPCLProcess.publish(pclROSProcess);
     }
 
 
@@ -160,6 +214,8 @@ void CamLidarSyncAlign::callbackImageLidarSync(const sensor_msgs::ImageConstPtr&
 
     // undistort image
     this->undistortCurrentImage(buf_img_, img_undistort_);
+//    baselink_frame = msg_lidar->header.frame_id;
+
 
 
     double time_img = (double)(msg_image->header.stamp.sec * 1e6 + msg_image->header.stamp.nsec / 1000) / 1000000.0;
@@ -212,6 +268,7 @@ void CamLidarSyncAlign::callbackImageLidarSync(const sensor_msgs::ImageConstPtr&
         }
 
         cv::rectangle(img_8u,lastBBQuery,cv::Scalar(0,255,0));
+        img_cali_ = img_8u;
         cv::imshow(winname_, img_8u);
         cv::waitKey(10);
     }
@@ -279,27 +336,102 @@ void CamLidarSyncAlign::pntBBQuery(cv::Rect boundingBox) {
  */
 void CamLidarSyncAlign::pntPixelQuery(const vector<cv::Point>& queryPntSet) {
     lastQueriedPoints->clear();
-    isBBQueried = true;
+    isQueryValid = (queryPntSet.size() != 0);
 
-//    cout << img_index_ << endl;
-    for (auto pnt : queryPntSet){
-        int r = pnt.y;
-        int c = pnt.x;
-        const short* ptr = img_index_.ptr<short >(r);
-        short idx = ptr[c];
-        if (idx > 0) {
-            double x = buf_lidar_x_warped[idx];
-            double y = buf_lidar_y_warped[idx];
-            double z = buf_lidar_z_warped[idx];
-            Eigen::Vector4d xyz_velo = T_bl*T_cl.inverse()*Eigen::Vector4d(x,y,z,1); // w.r.t velodyne
-            pcl::PointXYZ pnt;
-            pnt.x = xyz_velo(0);
-            pnt.y = xyz_velo(1);
-            pnt.z = xyz_velo(2);
-            lastQueriedPoints->push_back(pnt);
+    if (isQueryValid) {
+        vector<dbscan::Point> dbscanPoints;
+        //    cout << img_index_ << endl;
+        for (auto pnt : queryPntSet) {
+            int r = pnt.y;
+            int c = pnt.x;
+            const short *ptr = img_index_.ptr<short>(r);
+            short idx = ptr[c];
+            if (idx > 0) {
+                double x = buf_lidar_x_warped[idx];
+                double y = buf_lidar_y_warped[idx];
+                double z = buf_lidar_z_warped[idx];
+                Eigen::Vector4d xyz_velo = T_bl * T_cl.inverse() * Eigen::Vector4d(x, y, z, 1); // w.r.t velodyne
+                pcl::PointXYZ pnt;
+                pnt.x = xyz_velo(0);
+                pnt.y = xyz_velo(1);
+                pnt.z = xyz_velo(2);
+                lastQueriedPoints->push_back(pnt);
+                // dbscan points
+                dbscan::Point DBpnt;
+                DBpnt.x = pnt.x;
+                DBpnt.y = pnt.y;
+                DBpnt.z = pnt.z;
+                DBpnt.clusterID = UNCLASSIFIED;
+                dbscanPoints.push_back(DBpnt);
+            }
         }
-    }
 
+
+        // Clustering by dbscan
+        dbscan::DBSCAN dbscanObj(3, 0.1, dbscanPoints);
+        dbscanObj.run();
+        int totalClusterId = 0; // start from 1
+        vector<dbscan::PointSet> pointSet(100); // initialize with enough clustering numbers
+
+        for (int i = 0; i < dbscanPoints.size(); i++) {
+            int curCluster = dbscanObj.m_points[i].clusterID;
+            if (curCluster >=1)
+            pointSet[curCluster-1].points.push_back(dbscanObj.m_points[i]);
+            totalClusterId = max(totalClusterId, curCluster);
+        }
+        Eigen::MatrixXf centerMat(totalClusterId,3);
+        for (int i = 0 ; i < totalClusterId ; i++){
+            dbscan::Point curCenter = pointSet[i].getCenter(); // w.r.t frame id of  incoming pcl (baselink_frame)
+            tf::Stamped<tf::Point> pPcl; pPcl.frame_id_ = baselink_frame;
+            tf::Stamped<tf::Point> pMap; pMap.frame_id_ = map_frame;
+            pPcl.setData(tf::Point(curCenter.x,curCenter.y,0));
+            tf_l.transformPoint(map_frame,ros::Time(0),pPcl,baselink_frame,pMap);
+            centerMat.block(i,0,1,3) = Eigen::Vector3f(curCenter.x,curCenter.y,curCenter.z).transpose();
+        }
+
+        if (totalClusterId > 1) {
+            ROS_WARN_THROTTLE(2, "target pcl has multiple clusters! (%d) \n We pick the closest\n ", totalClusterId);
+            ROS_WARN_STREAM_THROTTLE(2,centerMat);
+        }
+
+
+        Eigen::Vector3f refPoint;
+
+        if(not isBBQueried){
+            // should do some initialization on the position of the target
+            // we assume the target is the nearest pcl to the origin
+
+            refPoint = Eigen::Vector3f::Zero();
+        }else{
+            // if previously solved, pick the nearest cluster
+            refPoint = prevTargetClusterCenter;
+        }
+
+        double minDistToOrigin = 1E+6;
+        int targetClusterId = -1;
+        for (int n = 0 ; n < totalClusterId ; n++){
+            double dist = (centerMat.block(n,0,1,3).transpose() - refPoint).norm();
+            if (dist < minDistToOrigin){
+                minDistToOrigin = dist;
+                targetClusterId = n;
+                prevTargetClusterCenter = centerMat.block(n,0,1,3).transpose();
+            }
+        }
+        ROS_INFO_ONCE("Initialized the center of target cloud as [%f,%f] from %d clusters.\n ",prevTargetClusterCenter(0),prevTargetClusterCenter(1),totalClusterId);
+
+        // save it to processed target pcl
+        lastQueriedPointsProcess->points.clear();
+
+        for (auto pnt : pointSet[targetClusterId].points){
+            pcl::PointXYZ pntPCL;
+            pntPCL.x = pnt.x;
+            pntPCL.y = pnt.y;
+            pntPCL.z = pnt.z;
+            lastQueriedPointsProcess->points.push_back(pntPCL);
+        }
+
+        isBBQueried = true;
+    }
 }
 
 

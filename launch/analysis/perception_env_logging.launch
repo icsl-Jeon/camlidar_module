@@ -18,6 +18,7 @@
     <arg name="frame_rate" default="10.0"/>
     <arg name = "map_align_angle" default = "0.0"/>
     <arg name = "imshow" default = "true"/>
+    <arg name = "to_center_ratio" default = "0.6"/>
 
     <!-- naked turtlebot  -->
     <arg name = "H_max" value = "45" />
@@ -54,7 +55,7 @@
 
 
 
-<!--     <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find vijeon)/rviz/lego_obstacle_tracking.rviz" if = "$(arg rviz)"/> -->
+    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find auto_chaser2)/rviz/realworldInput.rviz" if = "$(arg rviz)"/>
 
 
 
