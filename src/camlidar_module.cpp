@@ -336,6 +336,8 @@ void CamLidarSyncAlign::pntBBQuery(cv::Rect boundingBox) {
  */
 void CamLidarSyncAlign::pntPixelQuery(const vector<cv::Point>& queryPntSet) {
     lastQueriedPoints->clear();
+    lastQueriedPointsProcess->points.clear();
+
     isQueryValid = (queryPntSet.size() != 0);
 
     if (isQueryValid) {
@@ -423,7 +425,6 @@ void CamLidarSyncAlign::pntPixelQuery(const vector<cv::Point>& queryPntSet) {
 
         if (targetClusterId >= 0) {
 
-            lastQueriedPointsProcess->points.clear();
 
             for (auto pnt : pointSet[targetClusterId].points) {
                 pcl::PointXYZ pntPCL;
