@@ -1,86 +1,19 @@
 <launch>
 <!-- first, roslaunch px4_code  lego_loam_px4.launch -->
-    <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/Easy/testPlanningCart3.bag"/>
+    <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/Easy/HighObstFastWithTarget.bag"/>
     <arg name = "obstMinX" value = "0"/>
     <arg name = "obstMaxX" value = "13"/>
     <arg name = "obstMinY" value = "-3"/>
     <arg name = "obstMaxY" value = "5"/>
-    <arg name = "obstMinZ" value = "-0.1"/>
-    <arg name = "obstMaxZ" value = "0.3"/>
+    <arg name = "obstMinZ" value = "-0.2"/>
+    <arg name = "obstMaxZ" value = "0.5"/>
 
 
     <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir)">
-        <remap from = "/velodyne_points_original" to = "/pcl"/>
     </node>
 
-
-    <!-- obstacle extractor -->
-    <node name="nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="log">
-        <param name="num_worker_threads" value="20"/>
-    </node>
-    <node name="obstacle_extractor" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleExtractor nodelet_manager">
-        <param name="active"               value="true"/>
-        <param name="use_scan"             value="false"/>
-        <param name="use_pcl"              value="true"/>
-
-        <param name="use_split_and_merge"    value="false"/>
-        <param name="circles_from_visibles"  value="false"/>
-        <param name="discard_converted_segments" value="false"/>
-        <param name="transform_coordinates"  value="true"/>
-
-        <param name="min_group_points"     value="7"/>
-
-        <param name="max_group_distance"   value="0.2"/>
-        <param name="distance_proportion"  value="0.00628"/>
-        <param name="max_split_distance"   value="3"/>
-        <param name="max_merge_separation" value="0.3"/>
-        <param name="max_merge_spread"     value="2.0"/>
-        <param name="max_circle_radius"    value="1.5"/>
-        <param name="radius_enlargement"   value="0.0"/>
-
-        <param name="min_x_limit"   value="$(arg obstMinX)"/>
-        <param name="max_x_limit"   value="$(arg obstMaxX)"/>
-        <param name="min_y_limit"   value="$(arg obstMinY)"/>
-        <param name="max_y_limit"   value="$(arg obstMaxY)"/>
-        <param name="min_z_limit"   value="$(arg obstMinZ)"/>
-        <param name="max_z_limit"   value="$(arg obstMaxZ)"/>
-
-        <param name="frame_id"             value="map"/>
-    </node>
-
-    <node name="obstacle_tracker" pkg="nodelet" type="nodelet" args="load obstacle_detector/ObstacleTracker nodelet_manager">
-        <param name="active"                  value="true"/>
-
-        <param name="loop_rate"               value="50.0"/>
-        <param name="tracking_duration"       value="200000.0"/>
-        <!--should be small enough for not confused with target and obstacles and large enough to bring the redetected target back -->
-        <param name="min_correspondence_cost" value="0.4"/>
-        <param name="std_correspondence_dev"  value="0.15"/>
-        <param name="process_variance"        value="0.001"/>
-        <param name="process_rate_variance"   value="0.0002"/>
-        <param name="measurement_variance"    value="0.2"/>
-
-        <param name="frame_id"                value="map"/>
-
-        <remap from="tracked_obstacles" to="obstacles"/>
-    </node>
-
-    <node pkg="auto_chaser2" type= "real_target_state_publisher" name = "target_operation" output="screen">
-        <remap from = "/target_hsv_extractor/bb_queried_pnts" to = "/target_hsv_extractor/bb_queried_pnts_processed"/>
-        <param name = "world_frame_id" value= "map" />
-        <param name = "sigma" value = "1.0" />
-        <param name = "targetHeight" value = "-0.4" />
-        <param name = "mapFrameAlignYaw" value = "-0.24"/>
-        <remap from = "~target_pose_cov" to = "/target_pose_cov"/>
-        <param name = "min_corr_pnts" value = "2"/>
-    </node>
-
-
-    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find auto_chaser2)/rviz/realworldInput.rviz"/>
-
-
-
-
-
+      <include file="$(find camlidar_module)/launch/perception_env.launch">
+            <arg name = "is_analyze" value = "true"/>
+        </include>
 
 </launch>
