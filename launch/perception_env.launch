@@ -133,7 +133,7 @@
         <param name="std_correspondence_dev"  value="0.15"/>
         <param name="process_variance"        value="0.00001"/>
         <param name="process_rate_variance"   value="0.0002"/>
-        <param name="measurement_variance"    value="100.2"/>
+        <param name="measurement_variance"    value="500000.2"/> <!--lock obstacles -->
 
         <param name="frame_id"                value="map"/>
         <remap from="/raw_obstacles" to="/target_operation/obstacle_target_removed"/>
@@ -212,7 +212,7 @@
         <param name = "targetHeight" value = "-0.4" />
         <remap from = "~target_pose_cov" to = "/target_pose_cov"/>
         <param name = "min_corr_pnts" value = "2"/>
-        <param name = "smoothing_weight" value = "0.4"/>
+        <param name = "smoothing_weight" value = "0.8"/>
     </node>
 
 

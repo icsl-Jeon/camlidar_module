@@ -10,7 +10,7 @@
     <arg name = "obstMaxZ" value = "0.5"/>
 
 
-    <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir)">
+    <node name="play_forest" pkg="rosbag" type="play" output="log" args="$(arg bag_dir) -s 0">
     </node>
 
       <include file="$(find camlidar_module)/launch/perception_env.launch">
