@@ -1,7 +1,7 @@
 <launch>
 <!-- first, roslaunch px4_code  lego_loam_px4.launch -->
-<!--     <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/Easy/HighObstFastWithTarget.bag"/> -->
-    <arg name="bag_dir" default="/media/jbs/Samsung_T3/2020BAG/vijeon/auto_chaser2/layerA/Easy/HighObstFastWithTarget.bag"/>
+    <arg name="bag_dir" default="/home/jbs/log/auto_chaser2/layerA/Hard/firstFlightSuccess.bag"/>
+<!--     <arg name="bag_dir" default="/media/jbs/Samsung_T3/2020BAG/vijeon/auto_chaser2/layerA/Easy/Long8.bag"/> -->
     <arg name = "obstMinX" value = "0"/>
     <arg name = "obstMaxX" value = "13"/>
     <arg name = "obstMinY" value = "-3"/>

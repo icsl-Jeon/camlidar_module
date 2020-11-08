@@ -20,7 +20,7 @@
     <arg name="expose_us" default="15000"/>
     <arg name="frame_rate" default="10.0"/>
     <arg name = "map_align_angle" default = "0.0"/>
-    <arg name = "imshow" default = "true"/>
+    <arg name = "imshow" default = "false"/>
 
     <!--w.r.t map -->
     <arg name = "obstMinX" value = "0"/>
@@ -212,7 +212,7 @@
         <param name = "targetHeight" value = "-0.4" />
         <remap from = "~target_pose_cov" to = "/target_pose_cov"/>
         <param name = "min_corr_pnts" value = "2"/>
-        <param name = "smoothing_weight" value = "0.8"/>
+        <param name = "smoothing_weight" value = "0.9"/>
     </node>
 
 
